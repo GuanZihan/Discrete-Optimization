@@ -9,15 +9,12 @@ taken = []
 
 
 def Oracle2(dp, items, item_count, weights):
-    a = time.time()
     for i in range(item_count):
         for j in range(weights):
             if i == 0: dp[i][j] = 0
             elif items[i].weight <= j:
                 dp[i][j] = max(dp[i - 1][j - items[i].weight] + items[i].value, dp[i - 1][j])
             else: dp[i][j] = dp[i-1][j]
-    interval = time.time()
-    print(interval - a)
 
 
 def Oracle(items, k, j):
@@ -70,18 +67,25 @@ def solve_it(input_data):
         line = lines[i]
         parts = line.split()
         items.append(Item(i-1, int(parts[0]), int(parts[1])))
-    start = time.time()
-    value = Oracle(items, capacity - 1, item_count - 1)
-    print(time.time() - start)
-    # dp = [[0] * capacity] * item_count
+    # recursion version
+    # start = time.time()
+    # value = Oracle(items, capacity - 1, item_count - 1)
+    # print("recursion time: ", time.time() - start)
+
+    # dynamic programming version
     dp = [[0 for i in range(capacity)] for j in range(item_count)]
+    start = time.time()
     Oracle2(dp, items, item_count, capacity)
+    value = dp[-1][-1]
+    # print("dynamic programming time: ", time.time() - start)
 
     # prepare the solution in the specified output format
     output_data = str(value) + ' ' + str(0) + '\n'
     taken = []
+    start = time.time()
     taken = traceback(items, capacity - 1, item_count - 1, taken)
     taken = process(taken, item_count)
+    print("process: ", time.time() - start)
     output_data += ' '.join(map(str, taken))
 
     return output_data
