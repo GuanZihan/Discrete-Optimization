@@ -40,6 +40,15 @@ def traceback(items, w, i, taken):
         # print("else", i, )
         return traceback(items, w, i-1, taken)
 
+def traceback_dp(dp, items, w, i, taken):
+    if i == 0:
+        return taken
+    if dp[i][w] > dp[i-1][w]:
+        return traceback_dp(dp, items, w - items[i].weight, i-1, taken +[i])
+    else:
+        # print("else", i, )
+        return traceback_dp(dp, items, w, i-1, taken)
+
 def process(taken, capacity):
     ret = []
     for i in range(capacity):
@@ -83,9 +92,9 @@ def solve_it(input_data):
     output_data = str(value) + ' ' + str(0) + '\n'
     taken = []
     start = time.time()
-    taken = traceback(items, capacity - 1, item_count - 1, taken)
+    taken = traceback_dp(dp, items, capacity - 1, item_count - 1, taken)
     taken = process(taken, item_count)
-    print("process: ", time.time() - start)
+    # print("process: ", time.time() - start)
     output_data += ' '.join(map(str, taken))
 
     return output_data
