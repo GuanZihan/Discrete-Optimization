@@ -3,6 +3,7 @@
 
 from collections import namedtuple
 import time
+
 Item = namedtuple("Item", ['index', 'value', 'weight'])
 
 taken = []
@@ -11,10 +12,12 @@ taken = []
 def Oracle2(dp, items, item_count, weights):
     for i in range(item_count):
         for j in range(weights):
-            if i == 0: dp[i][j] = 0
+            if i == 0:
+                dp[i][j] = 0
             elif items[i].weight <= j:
                 dp[i][j] = max(dp[i - 1][j - items[i].weight] + items[i].value, dp[i - 1][j])
-            else: dp[i][j] = dp[i-1][j]
+            else:
+                dp[i][j] = dp[i - 1][j]
 
 
 def Oracle(items, k, j):
@@ -31,23 +34,26 @@ def Oracle(items, k, j):
     else:
         return Oracle(items, k, j - 1)
 
+
 def traceback(items, w, i, taken):
     if i == 0:
         return taken
     if Oracle(items, w, i) > Oracle(items, w, i - 1):
-        return traceback(items, w - items[i].weight, i-1, taken +[i])
+        return traceback(items, w - items[i].weight, i - 1, taken + [i])
     else:
         # print("else", i, )
-        return traceback(items, w, i-1, taken)
+        return traceback(items, w, i - 1, taken)
+
 
 def traceback_dp(dp, items, w, i, taken):
     if i == 0:
         return taken
-    if dp[i][w] > dp[i-1][w]:
-        return traceback_dp(dp, items, w - items[i].weight, i-1, taken +[i])
+    if dp[i][w] > dp[i - 1][w]:
+        return traceback_dp(dp, items, w - items[i].weight, i - 1, taken + [i])
     else:
         # print("else", i, )
-        return traceback_dp(dp, items, w, i-1, taken)
+        return traceback_dp(dp, items, w, i - 1, taken)
+
 
 def process(taken, capacity):
     ret = []
@@ -72,10 +78,10 @@ def solve_it(input_data):
     items = []
     add = [0] * item_count
 
-    for i in range(1, item_count+1):
+    for i in range(1, item_count + 1):
         line = lines[i]
         parts = line.split()
-        items.append(Item(i-1, int(parts[0]), int(parts[1])))
+        items.append(Item(i - 1, int(parts[0]), int(parts[1])))
     # recursion version
     # start = time.time()
     # value = Oracle(items, capacity - 1, item_count - 1)
@@ -102,11 +108,12 @@ def solve_it(input_data):
 
 if __name__ == '__main__':
     import sys
+
     if len(sys.argv) > 1:
         file_location = sys.argv[1].strip()
         with open(file_location, 'r') as input_data_file:
             input_data = input_data_file.read()
         print(solve_it(input_data))
     else:
-        print('This test requires an input file.  Please select one from the data directory. (i.e. python solver.py ./data/ks_4_0)')
-
+        print(
+            'This test requires an input file.  Please select one from the data directory. (i.e. python solver.py ./data/ks_4_0)')
