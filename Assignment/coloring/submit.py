@@ -204,6 +204,7 @@ def output(input_file, solver_file):
     Returns:
         the submission string in a format that the grader expects
     '''
+    print(solver_file[:-3])
 
     try:
         pkg = __import__(solver_file[:-3]) # remove '.py' extension
