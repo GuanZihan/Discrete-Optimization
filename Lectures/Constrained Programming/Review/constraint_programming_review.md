@@ -32,7 +32,7 @@ account, the differences between constraint and integer programming systems star
 ### 3.5 Dual Modeling
 ### 3.6 First-fail
 ### 3.7 Value/Variable labeling
-### 3.8 Domain Spliting
+### 3.8 Domain Splitting
 
 
 ## 4. Examples
