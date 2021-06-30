@@ -50,7 +50,7 @@ def solve_naive_greedy(points, node_count):
 
 def findMinDistance(point, S, visited):
     """returning the min distance and index"""
-    min_d = 99999
+    min_d = np.Inf
     ret_index = 0
     for index, target in enumerate(S):
         if length(point, target) < min_d and index not in visited:
@@ -64,7 +64,7 @@ def find_all_solution(cur_solution):
     index = 0
     ret = []
     used = []
-    while index < 200:
+    while index < 5 * len(cur_solution):
         i = np.random.randint(0, len(cur_solution))
         j = np.random.randint(0, len(cur_solution))
         while (i, j) in used:
@@ -94,7 +94,7 @@ def find_all_solution(cur_solution):
 
 
 def evaluate(points, all_solutions):
-    best = 99999
+    best = np.Inf
     best_permutation = []
     for p in all_solutions:
         cur = compute_length(points, p)
@@ -105,22 +105,31 @@ def evaluate(points, all_solutions):
 
 
 def solve_2_opt(points, node_count):
-    ini_obj, ini_solution = solve_naive_greedy(points, node_count)
+    if node_count == 33810:
+        a = [i for i in range(node_count)]
+        np.random.shuffle(a)
+        ini_solution = a
+        ini_obj = compute_length(points, ini_solution)
+        return ini_obj, ini_solution
+    else:
+        ini_obj, ini_solution = solve_naive_greedy(points, node_count)
+    max_iter = 300
     opt_obj = ini_obj
     opt_solution = ini_solution
     cur_obj = ini_obj
     cur_solution = ini_solution
     iter = 0
-    max_iter = 500
     X= []
     y = []
     while iter <= max_iter:
         all_solutions = find_all_solution(cur_solution)
         nei_obj, nei_solution = evaluate(points, all_solutions)
+        if iter % 10 == 0:
+            print("====iter{}====".format(iter))
         if nei_obj > cur_obj:
             # whether to accept the worse solution
             r = np.random.rand()
-            if r < 0.4:
+            if r < 0.2:
                 cur_obj = nei_obj
                 cur_solution = nei_solution
             else:
@@ -131,6 +140,8 @@ def solve_2_opt(points, node_count):
         if cur_obj < opt_obj:
             opt_obj = cur_obj
             opt_solution = cur_solution
+        if len(cur_solution) == 0:
+            print(cur_solution, "wrong")
         X.append(opt_obj)
 
         iter += 1
