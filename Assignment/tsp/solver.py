@@ -3,15 +3,15 @@
 
 import math
 from collections import namedtuple
-from gurobipy import *
+#from gurobipy import *
 import numpy as np
 # import six
 import sys
 # import dimod
-import networkx as nx
+#import networkx as nx
 # from python_tsp.heuristics import solve_tsp_local_search
 # import dwave_networkx as dnx
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 # sys.modules['sklearn.externals.six'] = six
 # import mlrose
 
@@ -135,8 +135,8 @@ def solve_2_opt(points, node_count):
 
         iter += 1
         y.append(iter - 1)
-    plt.plot(y, X)
-    plt.show()
+    #plt.plot(y, X)
+    #plt.show()
     return opt_obj, opt_solution
 
 
