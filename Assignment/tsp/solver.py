@@ -6,8 +6,8 @@ from collections import namedtuple
 #from gurobipy import *
 import numpy as np
 import random
-import numba
-from numba import jit
+# import numba
+# from numba import jit
 # import six
 import sys
 # import dimod
@@ -151,11 +151,11 @@ def solve_2_opt(points, node_count):
         iter += 1
         y.append(iter - 1)
     # plt.plot(y, X)
-    X = [i.x for i in points]
-    y = [i.y for i in points]
-    for i in opt_solution:
-        plt.plot(X[i:i-2], y[i:i-2], 'bo-')
-    plt.show()
+    # X = [i.x for i in points]
+    # y = [i.y for i in points]
+    # for i in opt_solution:
+    #     plt.plot(X[i:i-2], y[i:i-2], 'bo-')
+    # plt.show()
 
     return opt_obj, opt_solution
 
