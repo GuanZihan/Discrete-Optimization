@@ -5,13 +5,16 @@ import math
 from collections import namedtuple
 #from gurobipy import *
 import numpy as np
+import random
+import numba
+from numba import jit
 # import six
 import sys
 # import dimod
 #import networkx as nx
 # from python_tsp.heuristics import solve_tsp_local_search
 # import dwave_networkx as dnx
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 # sys.modules['sklearn.externals.six'] = six
 # import mlrose
 
@@ -64,44 +67,38 @@ def find_all_solution(cur_solution):
     index = 0
     ret = []
     used = []
-    while index < 5 * len(cur_solution):
+    swap_index = []
+    while index < 20 * len(cur_solution):
         i = np.random.randint(0, len(cur_solution))
         j = np.random.randint(0, len(cur_solution))
-        while (i, j) in used:
+        while (i, j) in used or i == j:
             i = np.random.randint(0, len(cur_solution))
             j = np.random.randint(0, len(cur_solution))
         used.append((i, j))
         new_solution = []
-        if i <= j:
-            new_solution = cur_solution[:i]
-            temp = []
-            for p in range(i, j + 1):
-                temp.append(cur_solution[p])
-            temp.reverse()
-            new_solution += temp
-            new_solution += cur_solution[j + 1:]
-        if i > j:
-            new_solution = cur_solution[:j]
-            temp = []
-            for p in range(j, i + 1):
-                temp.append(cur_solution[p])
-            temp.reverse()
-            new_solution += temp
-            new_solution += cur_solution[i + 1:]
+        if i < j:
+            new_solution = cur_solution.copy()
+            new_solution[i:j] = reversed(new_solution[i:j])
+        else:
+            new_solution = cur_solution.copy()
+            new_solution[j:i] = reversed(new_solution[j:i])
         ret.append(new_solution)
+        swap_index.append(tuple((i, j)))
         index += 1
-    return ret
+    return ret, swap_index
 
 
-def evaluate(points, all_solutions):
+def evaluate(points, all_solutions, tabu_list, swap_index):
     best = np.Inf
     best_permutation = []
-    for p in all_solutions:
+    best_index = 0
+    for i, p in enumerate(all_solutions):
         cur = compute_length(points, p)
-        if cur < best:
+        if cur < best and swap_index[i] not in tabu_list and tuple(reversed(swap_index[i])) not in tabu_list:
             best_permutation = p
             best = cur
-    return best, best_permutation
+            best_index = i
+    return best, best_permutation, best_index
 
 
 def solve_2_opt(points, node_count):
@@ -121,36 +118,163 @@ def solve_2_opt(points, node_count):
     iter = 0
     X= []
     y = []
+    tabu_list = []
+    tabu_len = 50
     while iter <= max_iter:
-        all_solutions = find_all_solution(cur_solution)
-        nei_obj, nei_solution = evaluate(points, all_solutions)
+        all_solutions, swap_index = find_all_solution(cur_solution)
+        nei_obj, nei_solution, nei_index = evaluate(points, all_solutions, tabu_list, swap_index)
         if iter % 10 == 0:
             print("====iter{}====".format(iter))
         if nei_obj > cur_obj:
             # whether to accept the worse solution
             r = np.random.rand()
-            if r < 0.2:
+            if r < 0.5:
                 cur_obj = nei_obj
                 cur_solution = nei_solution
+                if len(tabu_list) >= tabu_len:
+                    tabu_list.remove(tabu_list[0])
+                tabu_list.append(tuple(reversed(swap_index[nei_index])))
             else:
                 break
         else:
             cur_obj = nei_obj
             cur_solution = nei_solution
+            if len(tabu_list) >= tabu_len:
+                tabu_list.remove(tabu_list[0])
+            tabu_list.append(tuple(reversed(swap_index[nei_index])))
         if cur_obj < opt_obj:
             opt_obj = cur_obj
             opt_solution = cur_solution
-        if len(cur_solution) == 0:
-            print(cur_solution, "wrong")
+        print(tabu_list)
         X.append(opt_obj)
 
         iter += 1
         y.append(iter - 1)
-    #plt.plot(y, X)
-    #plt.show()
+    # plt.plot(y, X)
+    X = [i.x for i in points]
+    y = [i.y for i in points]
+    for i in opt_solution:
+        plt.plot(X[i:i-2], y[i:i-2], 'bo-')
+    plt.show()
+
     return opt_obj, opt_solution
 
 
+def solve_k_opt(points, node_count):
+    if node_count == 33810:
+        a = [i for i in range(node_count)]
+        np.random.shuffle(a)
+        ini_solution = a
+        ini_obj = compute_length(points, ini_solution)
+        return ini_obj, ini_solution
+    else:
+        # ini_obj, ini_solution = solve_naive_greedy(points, node_count)
+        a = [i for i in range(node_count)]
+        np.random.shuffle(a)
+        ini_solution = a
+        ini_obj = compute_length(points, ini_solution)
+    max_iter = 300
+    opt_obj = ini_obj
+    opt_solution = ini_solution
+    cur_obj = ini_obj
+    cur_solution = ini_solution
+    iter = 0
+    max_k = 3
+    X= []
+    y = []
+    tabu_list = []
+    tabu_len = 50
+    while iter <= max_iter:
+        all_solutions, swap_index = find_all_solutions_3_opt(points, cur_solution, max_k)
+        if len(all_solutions) == 0:
+            break
+        nei_obj, nei_solution, nei_index = evaluate(points, all_solutions, tabu_list, swap_index)
+        if iter % 10 == 0:
+            print("====iter{}====".format(iter))
+        if nei_obj > cur_obj:
+            # whether to accept the worse solution
+            r = np.random.rand()
+            if r < 0.5:
+                cur_obj = nei_obj
+                cur_solution = nei_solution
+                if len(tabu_list) >= tabu_len:
+                    tabu_list.remove(tabu_list[0])
+                tabu_list.append(tuple(reversed(swap_index[nei_index])))
+            else:
+                break
+        else:
+            cur_obj = nei_obj
+            cur_solution = nei_solution
+            if len(tabu_list) >= tabu_len:
+                tabu_list.remove(tabu_list[0])
+            tabu_list.append(tuple(reversed(swap_index[nei_index])))
+        if cur_obj < opt_obj:
+            opt_obj = cur_obj
+            opt_solution = cur_solution
+        print(tabu_list)
+        X.append(opt_obj)
+
+        iter += 1
+    return opt_obj, opt_solution
+
+
+def find_all_solutions_3_opt(points, cur_solution, max_k):
+    index = 0
+    ret = []
+    used = []
+    swap_index = []
+    for i in range(200 * len(cur_solution)):
+        new_solution = cur_solution.copy()
+        ks = random.sample([i for i in range(0, len(cur_solution))], 3)
+        ks = sorted(ks)
+        while ks in used:
+            ks = random.sample([i for i in range(len(cur_solution))], 2)
+        A, B, C, D, E, F = cur_solution[ks[0] - 1], cur_solution[ks[0]], \
+                           cur_solution[ks[1] - 1], cur_solution[ks[1]],\
+                           cur_solution[ks[2] - 1], cur_solution[ks[2] - 1]
+        # d0 = length(points[A], points[B]) + length(points[C], points[D]) + length(points[E], points[F])
+        # d1 = length(points[A], points[C]) + length(points[B], points[D]) + length(points[E], points[F])
+        # d2 = length(points[A], points[B]) + length(points[C], points[E]) + length(points[D], points[F])
+        # d3 = length(points[A], points[D]) + length(points[E], points[B]) + length(points[C], points[F])
+        # d4 = length(points[F], points[B]) + length(points[C], points[D]) + length(points[E], points[A])
+        # exchange i and j
+        new_solution[ks[0]: ks[1]] = reversed(new_solution[ks[0]: ks[1]])
+        ret.append(new_solution)
+        swap_index.append(tuple((ks[0], ks[1])))
+
+        # exchange j and k
+        new_solution[ks[1]: ks[2]] = reversed(new_solution[ks[1]: ks[2]])
+        ret.append(new_solution)
+        swap_index.append(tuple((ks[1], ks[2])))
+
+        # exchange i and j
+        new_solution[ks[0]: ks[2]] = reversed(new_solution[ks[0]: ks[2]])
+        ret.append(new_solution)
+        swap_index.append(tuple((ks[0], ks[2])))
+
+        # if d0 > d1:
+        #     new_solution[ks[0]: ks[1]] = reversed(new_solution[ks[0]: ks[1]])
+        #     ret.append(new_solution)
+        #     swap_index.append(tuple((ks[0], ks[1])))
+        #     continue
+        # elif d0 > d2:
+        #     new_solution[ks[1]: ks[2]] = reversed(new_solution[ks[1]: ks[2]])
+        #     ret.append(new_solution)
+        #     swap_index.append(tuple((ks[1], ks[2])))
+        #     continue
+        # elif d0 > d4:
+        #     new_solution[ks[0]: ks[2]] = reversed(new_solution[ks[0]: ks[2]])
+        #     ret.append(new_solution)
+        #     swap_index.append(tuple((ks[0], ks[2])))
+        #     continue
+        # elif d0 > d3:
+        #     tmp = new_solution[ks[1]: ks[2]] + new_solution[ks[0]: ks[1]]
+        #     new_solution[ks[0]: ks[2]] = tmp
+        #     print(len(new_solution))
+        #     ret.append(new_solution)
+        #     swap_index.append(tuple((ks[0], ks[1], ks[2])))
+        #     continue
+    return ret, swap_index
 # def solve_tsp(points, nodeCount):
 #     m = [[0 for i in range(nodeCount)] for j in range(nodeCount)]
 #     for i in range(nodeCount):
@@ -209,7 +333,7 @@ def solve_it(input_data):
     # build a trivial solution
     # visit the nodes in the order they appear in the file
     # obj, solution = solve_naive_greedy(points, nodeCount)
-    obj, solution = solve_2_opt(points, nodeCount)
+    obj, solution = solve_k_opt(points, nodeCount)
     # print(compute_length(points, solution), obj)
     # obj, solution = solve_tsp(points, nodeCount)
     # obj, solution = solve_nx(points)
